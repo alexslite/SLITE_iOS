@@ -13,25 +13,49 @@ import Mixpanel
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        // Print current configuration for debugging
+        Configuration.printCurrentConfiguration()
+        
+        // Configure Firebase
         FirebaseApp.configure()
         
+        // Configure Sentry with environment-based settings
         SentrySDK.start { options in
-            options.dsn = "https://08c85a019d0a4e3fb7fb8115c535d951@o1297260.ingest.sentry.io/6525588"
-            options.debug = true
+            options.dsn = Configuration.Analytics.sentryDSN
+            options.debug = Configuration.Analytics.enableDebugMode
             
-            options.tracesSampleRate = 1.0
+            // Modern iOS 17+ tracing configuration
+            options.tracesSampleRate = Configuration.Analytics.tracesSampleRate
+            options.enableTracing = true
+            options.enableAutoSessionTracking = true
+            
+            // Add environment tag
+            options.environment = Configuration.current.rawValue
         }
         
-        Mixpanel.initialize(token: "a4e9e25417a643291c512cd775e446cd", trackAutomaticEvents: false)
+        // Configure Mixpanel with secure token handling
+        Mixpanel.initialize(token: Configuration.Analytics.mixpanelToken, trackAutomaticEvents: false)
         Mixpanel.mainInstance().identify(distinctId: Mixpanel.mainInstance().distinctId)
         
-//        UpdateAgent.loadFile()
+        // Set up modern iOS 17+ app lifecycle
+        if #available(iOS 17.0, *) {
+            // Enable modern app lifecycle features
+            application.isIdleTimerDisabled = false
+            
+            // Configure modern iOS features
+            configureModerniOSFeatures()
+        }
         
         return true
+    }
+    
+    @available(iOS 17.0, *)
+    private func configureModerniOSFeatures() {
+        // Configure modern iOS 17+ features
+        // This can include advanced Bluetooth features, enhanced security, etc.
     }
 
     // MARK: UISceneSession Lifecycle
@@ -47,7 +71,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-
-
 }
 

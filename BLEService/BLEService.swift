@@ -64,12 +64,21 @@ final class BLEService: NSObject {
     // MARK: - Central manager actions
     
     func initialiseBluetooth(completion: @escaping BluetoothStateCompletion) {
-        bleManager = CBCentralManager(delegate: self, queue: .main)
+        // Modern iOS 17+ Bluetooth initialization with better permission handling
+        var options: [String: Any] = [:]
+        
+        if #available(iOS 17.0, *) {
+            options[CBCentralManagerOptionShowPowerAlertKey] = true
+            options[CBCentralManagerOptionRestoreIdentifierKey] = Configuration.Bluetooth.restoreIdentifier
+        }
+        
+        bleManager = CBCentralManager(delegate: self, queue: .main, options: options.isEmpty ? nil : options)
         bluetoothStateCompletion = completion
     }
     
     func scanForPeripherals(withTimetout: Bool = true) {
-        bleManager?.scanForPeripherals(withServices: [serviceCBUUID])
+        // Modern iOS 17+ scanning with better power management
+        bleManager?.scanForPeripherals(withServices: [serviceCBUUID], options: Configuration.Bluetooth.scanOptions)
         
         guard withTimetout else { return }
         startScanningTimer()
@@ -103,10 +112,12 @@ final class BLEService: NSObject {
     func connectToPerihperal(_ peripheral: CBPeripheral, completion: @escaping BoolCompletion) {
         self.peripheralToConnect = peripheral
         self.connectionSuccessfull = completion
-        bleManager?.connect(peripheral)
         
-        connectionTimer = Timer.scheduledTimer(timeInterval: 15, target: self, selector: #selector(connectionDidFail), userInfo: nil, repeats: false)
+        bleManager?.connect(peripheral, options: Configuration.Bluetooth.connectionOptions)
+        
+        connectionTimer = Timer.scheduledTimer(timeInterval: Configuration.Bluetooth.connectionTimeout, target: self, selector: #selector(connectionDidFail), userInfo: nil, repeats: false)
     }
+    
     @objc private func connectionDidFail() {
         guard peripheralToConnect != nil else { return }
         connectionTimer?.invalidate()
@@ -138,7 +149,7 @@ final class BLEService: NSObject {
             self.peripheralsToConnect.append(peripheral)
             self.peripheralsToSearch[peripheral.identifier.uuidString] = (true, peripheral)
             
-            self.bleManager?.connect(peripheral)
+            self.bleManager?.connect(peripheral, options: Configuration.Bluetooth.connectionOptions)
         }
         scanForPeripherals()
     }
@@ -146,11 +157,10 @@ final class BLEService: NSObject {
     // MARK: - Scan timer
     
     private func startScanningTimer() {
-        scanningTimer = Timer.scheduledTimer(timeInterval: 5, target: self, selector: #selector(checkUnavailableLights), userInfo: nil, repeats: false)
+        scanningTimer = Timer.scheduledTimer(timeInterval: Configuration.Bluetooth.scanTimeout, target: self, selector: #selector(checkUnavailableLights), userInfo: nil, repeats: false)
     }
     
     @objc private func checkUnavailableLights() {
-//        guard !(bleManager?.isScanning ?? false) else { return }
         let disconnectedLightsIds = peripheralsToSearch.filter { $0.value.1 == nil }.map { $0.key }
         peripheralsReconnectCallback?(disconnectedLightsIds)
         bleManager?.stopScan()
@@ -211,6 +221,7 @@ final class BLEService: NSObject {
             writeLightOutput(data: data, lightId: lightId)
         }
     }
+    
     func turnLightOn(data: Data, lightId: String) {
         writeLightOutput(data: data, lightId: lightId)
     }
@@ -227,8 +238,11 @@ final class BLEService: NSObject {
 
 extension BLEService: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        bluetoothStateCompletion?(central.state)
-        bluetoothStateCallback?(central.state)
+        // Modern iOS 17+ Bluetooth state handling
+        DispatchQueue.main.async {
+            self.bluetoothStateCompletion?(central.state)
+            self.bluetoothStateCallback?(central.state)
+        }
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
@@ -253,7 +267,6 @@ extension BLEService: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        
         // Add Light
         guard let peripheralToConnect = peripheralToConnect else { return }
         if peripheral.isPeripheral(peripheralToConnect) {
@@ -263,7 +276,6 @@ extension BLEService: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        
         onPeripheralDisconnected.send(peripheral.identifier.uuidString)
         
         if let handlerForDisconnectedLight = handlerFor(peripheral.identifier.uuidString) {
@@ -272,7 +284,7 @@ extension BLEService: CBCentralManagerDelegate {
         
         connectionHandlers.removeValue(forKey: peripheral.identifier.uuidString)
         
-        print("\nBLEService: Did disconnect peripheral \(peripheral.name!)")
+        print("\nBLEService: Did disconnect peripheral \(peripheral.name ?? "Unknown")")
     }
 }
 
@@ -300,12 +312,15 @@ extension CBCharacteristic {
     var isLightStatus: Bool {
         uuid == lightOutputSettings
     }
+    
     var isDeviceStatus: Bool {
         uuid == deviceStatus
     }
+    
     var isFWUpdateWrite: Bool {
         uuid == fwUpdateWriteCBUUID
     }
+    
     var isFWVersionRead: Bool {
         uuid == fwVersionReadCBUUID
     }
