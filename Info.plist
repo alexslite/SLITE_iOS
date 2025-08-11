@@ -13,7 +13,7 @@
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<string>$(PRODUCT_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
@@ -32,9 +32,15 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>“This will allow Slite to find and connect to Bluetooth accessories. This app may also use Bluetooth to know when you’re nearby”</string>
+	<string>Slite needs Bluetooth access to connect to and control your LED light panels. This allows you to adjust colors, brightness, and create custom lighting scenes.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Slite needs Bluetooth access to connect to and control your LED light panels. This allows you to adjust colors, brightness, and create custom lighting scenes.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>“Slite” would like to access your camera // Permission is required to allow you to pick the Slite color using your surroundings.</string>
+	<string>Slite uses your camera to detect colors from your surroundings, allowing you to match your lighting to your environment for perfect content creation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Slite accesses your photo library to let you select custom colors and create lighting scenes inspired by your photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Slite can save custom lighting scenes and color palettes to your photo library for future use.</string>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -64,7 +70,7 @@
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -81,5 +87,9 @@
 	<string>Dark</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Slite may use location services to optimize Bluetooth connections and provide location-based lighting suggestions.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Slite may access your microphone for voice-activated lighting controls and audio-reactive lighting effects.</string>
 </dict>
 </plist>
